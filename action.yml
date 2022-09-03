@@ -38,6 +38,9 @@ inputs:
   staging:
     description: "Whether to use Modrinth's staging api"
     required: false
+  new_project_body:
+    description: 'A new body for the mod page'
+    required: false
 outputs:
   id:
     description: 'The ID of the file created'

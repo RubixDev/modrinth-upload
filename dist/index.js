@@ -18768,6 +18768,9 @@ async function run() {
         (
             core.getInput('staging', { required: false }) || 'false'
         ).toLowerCase() === 'true'
+    const newProjectBody = core.getInput('new_project_body', {
+        required: false,
+    })
 
     let data = {
         name,
@@ -18813,6 +18816,22 @@ async function run() {
             )
         }
     })
+
+    if (newProjectBody) {
+        req.patch({
+            method: 'PATCH',
+            url:
+                (staging ? STAGING_API_URL : API_URL) + '/project/' + projectId,
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'github.com/RubixDev/modrinth-upload',
+                Authorization: token,
+            },
+            body: JSON.stringify({
+                body: newProjectBody,
+            }),
+        })
+    }
 }
 
 try {
