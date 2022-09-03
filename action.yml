@@ -1,46 +1,49 @@
-name: "Upload to CurseForge"
-description: "Uploads files to CurseForge via CurseForge API"
-author: "itsmeow"
+name: 'Upload to Modrinth'
+description: 'Uploads files to Modrinth via Labrinth API'
+author: 'RubixDev'
 inputs:
   token:
-    description: "Token used to authenticate with CurseForge API. Use a repository secret for this."
-    required: true
-  project_id:
-    description: "Project id (numerical) to upload file to. You can get the numerical ID from the sidebar on a project page."
-    required: true
-  game_endpoint:
-    description: "The subdomain of curseforge.com where the upload request will be made. (minecraft, kerbal, etc.)"
+    description: 'Token used to authenticate with Modrinth API. Use a repository secret for this'
     required: true
   file_path:
-    description: "The path to the file you want to upload"
+    description: 'The path to the file you want to upload'
+    required: true
+  name:
+    description: 'The display name for this file'
+    required: true
+  version:
+    description: 'The version number. Ideally will follow semantic versioning'
     required: true
   changelog:
-    description: "The changelog text to put on the file."
-    required: false
-  changelog_type:
-    description: 'The type of the changelog. Allowed values: "text", "html" (aka. WYSIWYG), "markdown".'
-    required: false
-  display_name:
-    description: "The display name for this file. Defaults to the filename."
-    required: false
-  parent_file_id:
-    description: "The id of the parent file to put this file under. Defaults to none. (IDs are integers)"
-    required: false
-  game_versions:
-    description: 'The game version IDs to select on this file. Separate IDs with "," (no quotes). See README for more info.'
-    required: false
-  release_type:
-    description: 'The type of this release. Allowed values: "alpha", "beta", "release".'
+    description: 'The changelog for this version'
     required: false
   relations:
-    description: 'List of projects this file is related to and their relation type. Separate with "," (no quotes). Format: projectslug:relationType - Valid relationTypes are: embeddedLibrary, incompatible, optionalDependency, requiredDependency, and tool'
+    description: 'List of projects this file is related to and their relation type. Separate with "," (no quotes). Format: projectId:relationType - Valid relationTypes are: required, optional, incompatible and embedded'
+    required: false
+  game_versions:
+    description: 'The game versions to select on this file. Separate with "," (no quotes)'
+    required: true
+  release_type:
+    description: 'The type of this release. Allowed values: "alpha", "beta", "release"'
+    required: false
+  loaders:
+    description: 'The mod loaders that this version supports. Separate with "," (no quotes)'
+    required: true
+  featured:
+    description: 'Whether the version is featured or not'
+    required: true
+  project_id:
+    description: 'Project ID to upload file to. You can get the ID from the sidebar on a project page under "Technical Information"'
+    required: true
+  staging:
+    description: "Whether to use Modrinth's staging api"
     required: false
 outputs:
   id:
-    description: "The ID of the file created."
+    description: 'The ID of the file created'
 runs:
-  using: "node16"
-  main: "dist/index.js"
+  using: 'node16'
+  main: 'dist/index.js'
 branding:
-  icon: "arrow-up-circle"
-  color: "orange"
+  icon: 'arrow-up-circle'
+  color: 'orange'

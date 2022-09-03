@@ -1,95 +1,76 @@
-# CurseForge Uploader
+# Modrinth Uploader
 
-An action for interacting with the [CurseForge file upload API](https://support.curseforge.com/en/support/solutions/articles/9000197321-curseforge-api)
+An action for interacting with the [Modrinth file upload API](https://docs.modrinth.com/api-spec)
 
 ## Usage/Arguments
 
-| Name           | Description                                                                                                                                                                                                                                                                    | Default Value | Required |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | -------- |
-| token          | Token used to authenticate with CurseForge API. Use a repository secret for this.                                                                                                                                                                                              | N/A           | ✅       |
-| project_id     | Project id (numerical) to upload file to. You can get the numerical ID from the sidebar on a project page.                                                                                                                                                                     | N/A           | ✅       |
-| game_endpoint  | The game subdomain of curseforge.com where the upload request will be made. (`minecraft`, `bukkit`, `kerbal`, etc.)                                                                                                                                                            | N/A           | ✅       |
-| file_path      | The path to the file you want to upload.                                                                                                                                                                                                                                       | N/A           | ✅       |
-| game_versions  | The game version IDs to select on this file. Separate IDs with commas. See README for more info.                                                                                                                                                                               | []            | ❌       |
-| release_type   | The type of this release. Allowed values: `alpha`, `beta`, `release`.                                                                                                                                                                                                          | `release`     | ❌       |
-| display_name   | The display name for this file.                                                                                                                                                                                                                                                | Filename      | ❌       |
-| changelog      | The changelog text to put on the file.                                                                                                                                                                                                                                         |               | ❌       |
-| changelog_type | The type of the changelog. Allowed values: `text`, `html` (aka. WYSIWYG), `markdown`.                                                                                                                                                                                          | `markdown`    | ❌       |
-| relations      | List of projects this file is related to and their relation type. Separate with commas. Format: `projectslug:relationType` (slug is found in project URL) - Valid relationTypes are: `embeddedLibrary`, `incompatible`, `optionalDependency`, `requiredDependency`, and `tool` | []            | ❌       |
-| parent_file_id | The id of the parent file to put this file under. (File IDs are integers, found in the URL)                                                                                                                                                                                    | None          | ❌       |
+| Name            | Description                                                                                                                                                                                            | Default Value | Required |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|----------|
+| `token`         | Token used to authenticate with Modrinth API. Use a repository secret for this                                                                                                                         | N/A           | ✅       |
+| `file_path`     | The path to the file you want to upload                                                                                                                                                                | N/A           | ✅       |
+| `name`          | The display name for this file                                                                                                                                                                         | N/A           | ✅       |
+| `version`       | The version number. Ideally will follow semantic versioning                                                                                                                                            | N/A           | ✅       |
+| `changelog`     | The change log for this version                                                                                                                                                                        |               | ❌       |
+| `relations`     | List of projects this file is related to and their relation type. Separate with `,`. Format: `projectId:relationType` - Valid relationTypes are: `required`, `optional`, `incompatible` and `embedded` |               | ❌       |
+| `game_versions` | The game versions to select on this file. Separate with `,`                                                                                                                                            | N/A           | ✅       |
+| `release_type`  | The type of this release. Allowed values: `alpha`, `beta`, `release`                                                                                                                                   | `release`     | ❌       |
+| `loaders`       | The mod loaders that this version supports. Separate with `,`                                                                                                                                          | N/A           | ✅       |
+| `featured`      | Whether the version is featured or not                                                                                                                                                                 | N/A           | ✅       |
+| `project_id`    | Project ID to upload file to. You can get the ID from the sidebar on a project page under "Technical Information"                                                                                      | N/A           | ✅       |
+| `staging`       | Whether to use Modrinth's staging api                                                                                                                                                                  | `false`       | ❌       |
 
 ## Example Workflow
 
 ```yml
-name: "Build Release"
-on: push
+name: "Build and Publish"
+on:
+  release:
+    types: [published]
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - { uses: actions/checkout@v2, with: { fetch-depth: 0 } }
-      - {
-          name: "Set up JDK 17",
-          uses: actions/setup-java@v2,
-          with: { distribution: "adopt", java-version: "17" },
-        }
-      - {
-          name: "Build with Gradle",
-          id: build,
-          run: "chmod +x gradlew && ./gradlew build publish",
-        }
-      - name: "Upload to CurseForge"
-        uses: itsmeow/curseforge-upload@v3
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
         with:
-          file_path: "build/libs/examplemod-${{ steps.build.outputs.version }}.jar"
-          game_endpoint: "minecraft"
-          relations: "fabric-api:requiredDependency"
-          game_versions: "Minecraft 1.18:1.18.1,Java 17,Fabric"
-          project_id: "0"
-          token: "${{ secrets.CF_API_TOKEN }}"
+          distribution: 'temurin'
+          java-version: 17
+          cache: 'gradle'
+
+      - name: Build with Gradle
+        id: build,
+        run: chmod +x gradlew && ./gradlew build
+
+      - name: Find correct JAR
+        id: findjar
+        run: |
+          output="$(find build/libs/ ! -name "*-dev.jar" ! -name "*-sources.jar" -type f -printf "%f\n")"
+          echo "::set-output name=jarname::$output"
+
+      - name: Upload to the GitHub release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: build/libs/${{ steps.findjar.outputs.jarname }}
+          asset_name: ${{ steps.findjar.outputs.jarname }}
+          asset_content_type: application/java-archive
+
+      - name: Upload to Modrinth
+        uses: RubixDev/modrinth-upload@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          file_path: build/libs/${{ steps.findjar.outputs.jarname }}
+          name: My super cool mod ${{ github.event.release.tag_name }}
+          version: ${{ github.event.release.tag_name }}
+          changelog: ${{ github.event.release.body }}
+          relations: P7dR8mSH:required
+          game_versions: 1.19,1.19.1,1.19.2
+          release_type: beta
+          loaders: fabric,forge
+          featured: true
+          project_id: abcDEFGH
 ```
-
-In this example, a file is uploaded with no custom title to project ID 0 in the Minecraft game category, with a dependency on Fabric API and game versions 1.18.1, Java 17, and Fabric loader.
-
-The version in the filepath is not exported by default, so you can add this block to your buildscript to do so (this requires the Ubuntu runner):
-
-```groovy
-exec {
-    commandLine "echo", "##[set-output name=version;]${project.version}";
-}
-```
-
-## Getting an API token
-
-Obtain them here: https://www.curseforge.com/account/api-tokens
-
-Add the token to your repository's secrets tab to use it, found under Settings.
-
-## Game Version IDs Explained
-
-You **MUST** namespace Minecraft version IDs as there are duplicates in the system for Bukkit.
-
-### API Method
-
-You can use numerical IDs by making a request to and picking your versions from this API:
-
-https://`endpoint`.curseforge.com/api/game/versions?token=`your_token`
-
-Using this method is more efficient request wise, as otherwise the Action will have to search this API before requesting the upload.
-
-### Inspect Element Method
-
-Another method is using Inspect Element on the game version check boxes, the `value` field contains the version ID.
-
-### Convenience Method
-
-However, this is not always convenient. You can also use names and slugs from that API, for example: "1.12.2" and "Java 8" will be automatically parsed into the proper id.
-
-You may encounter issues with names/slugs that have multiple entries with different game version types. The minecraft endpoint has "1.12" 5 separate times with different game version types for Bukkit, Minecraft 1.12, etc.
-To fix this, you can prefix a game version with a Type's ID, slug, or name. For example "Minecraft 1.12:1.12" would get you ONLY the Minecraft 1.12 version and not the 4 others.
-
-Another example is "java:Java 8". This filters to anything named "Java 8" with the type matching the slug/name "java".
-
-You can get a list of game version type IDs from this API:
-
-https://`endpoint`.curseforge.com/api/game/version-types?token=`your_token`
