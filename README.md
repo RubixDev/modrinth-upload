@@ -48,7 +48,7 @@ jobs:
         id: findjar
         run: |
           output="$(find build/libs/ ! -name "*-dev.jar" ! -name "*-sources.jar" -type f -printf "%f\n")"
-          echo "::set-output name=jarname::$output"
+          echo "jarname=$output" >> $GITHUB_OUTPUT
 
       - name: Upload to the GitHub release
         uses: actions/upload-release-asset@v1
